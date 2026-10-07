@@ -203,7 +203,11 @@ function getChannelPercentage(channel: ProviderQuotaChannel): number {
     if (qd.windows?.dailyInputTokens) maxPercent = Math.max(maxPercent, (qd.windows.dailyInputTokens.percentUsed ?? 0) * 100);
     if (qd.windows?.dailyImages) maxPercent = Math.max(maxPercent, (qd.windows.dailyImages.percentUsed ?? 0) * 100);
     percentage = maxPercent;
-  } else if (channel.type === 'opencode_go' || channel.type === 'opencode_go_anthropic') {
+  } else if (
+    channel.type === 'opencode_go' ||
+    channel.type === 'opencode_go_anthropic' ||
+    (isOpenaiType(channel.type) && channel.providerType === 'apimes')
+  ) {
     percentage = Math.max(0, ...channel.quotaStatus.limits.map((limit) => limit.usageRatio * 100));
   } else if (isOllamaType(channel.type)) {
     const qd = channel.quotaStatus.quotaData as ProviderOllamaQuotaData | undefined;
@@ -1196,13 +1200,16 @@ function QuotaRow({ channel, effectiveMode }: { channel: ProviderQuotaChannel; e
         </div>
       )}
 
-      {(channel.type === 'opencode_go' || channel.type === 'opencode_go_anthropic') && (
+      {(channel.type === 'opencode_go' ||
+        channel.type === 'opencode_go_anthropic' ||
+        (isOpenaiType(channel.type) && channel.providerType === 'apimes')) && (
         <div className='mt-3 space-y-3'>
           {(() => {
             // OpenCode Go renders from the normalized limits: its checker maps
             // the rolling/weekly/monthly windows onto the shared 5h/weekly/
             // monthly labels, so the shared window bar rendering applies.
-            const preferredWindows = ['5h', 'weekly', 'monthly'];
+            // apimes Token Plan reports 5h/7d windows the same way.
+            const preferredWindows = ['5h', '7d', 'weekly', 'monthly'];
             const items: React.ReactNode[] = [];
 
             quota.limits

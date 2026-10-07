@@ -781,6 +781,13 @@ export type ProviderQuotaChannel = {
     }
   | {
       type: 'openai' | 'openai_responses';
+      providerType: 'apimes';
+      quotaStatus: {
+        quotaData: ProviderQuotaDataCommon;
+      };
+    }
+  | {
+      type: 'openai' | 'openai_responses';
       providerType?: undefined;
       quotaStatus: {
         quotaData: ProviderQuotaDataCommon;
@@ -984,6 +991,14 @@ function parseChannelNode(node: QueryChannelNodeWithQuota): ProviderQuotaChannel
         type: typeVal,
         providerType: 'charm_hyper' as const,
         quotaStatus: { ...base.quotaStatus, quotaData: node.providerQuotaStatus.quotaData as ProviderCharmHyperQuotaData },
+      };
+    }
+    if (providerType === 'apimes') {
+      return {
+        ...base,
+        type: typeVal,
+        providerType: 'apimes' as const,
+        quotaStatus: { ...base.quotaStatus, quotaData: node.providerQuotaStatus.quotaData as ProviderQuotaDataCommon },
       };
     }
     return {

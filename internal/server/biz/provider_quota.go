@@ -394,6 +394,7 @@ func (svc *ProviderQuotaService) registerProviderQuotaSupport() {
 	svc.registerZhipuSupport()
 	svc.registerZaiSupport()
 	svc.registerCharmHyperSupport()
+	svc.registerApimesSupport()
 	svc.registerCommandCodeSupport()
 	svc.registerOllamaSupport()
 }
@@ -486,6 +487,10 @@ func (svc *ProviderQuotaService) registerZaiSupport() {
 
 func (svc *ProviderQuotaService) registerCharmHyperSupport() {
 	svc.checkers["charm_hyper"] = provider_quota.NewCharmHyperQuotaChecker(svc.httpClient)
+}
+
+func (svc *ProviderQuotaService) registerApimesSupport() {
+	svc.checkers["apimes"] = provider_quota.NewApimesQuotaChecker(svc.httpClient)
 }
 
 func (svc *ProviderQuotaService) intervalToCronExpr(interval time.Duration) string {
