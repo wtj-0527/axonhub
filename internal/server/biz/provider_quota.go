@@ -1028,6 +1028,9 @@ func (svc *ProviderQuotaService) getProviderType(ch *ent.Channel) string {
 	case channel.TypeClaudecode:
 		return "claudecode"
 	case channel.TypeCodex:
+		if isApimesThirdPartyCodex(ch) {
+			return provider_quota.ApimesProviderType
+		}
 		return "codex"
 	case channel.TypeAntigravity:
 		return "antigravity"
@@ -1062,6 +1065,19 @@ func (svc *ProviderQuotaService) getProviderType(ch *ent.Channel) string {
 	}
 }
 
+// isApimesThirdPartyCodex reports whether a Codex channel is configured in
+// third-party mode (plain API key, no OAuth) against an apimes gateway, whose
+// Token Plan quota is read from /v1/usage instead of the ChatGPT backend.
+func isApimesThirdPartyCodex(ch *ent.Channel) bool {
+	if ch.Type != channel.TypeCodex {
+		return false
+	}
+	if ch.Credentials.OAuth != nil || isOAuthJSON(ch.Credentials.APIKey) {
+		return false
+	}
+	return provider_quota.DetectProviderFromURL(ch.BaseURL) == provider_quota.ApimesProviderType
+}
+
 func hasCredentialsForProvider(ch *ent.Channel) bool {
 	switch ch.Type { //nolint:exhaustive // Only ZenMux uses the separate management credential.
 	case channel.TypeZenmux, channel.TypeZenmuxResponses, channel.TypeZenmuxAnthropic, channel.TypeZenmuxGemini, channel.TypeZenmuxVideo:
@@ -1074,6 +1090,10 @@ func hasCredentialsForProvider(ch *ent.Channel) bool {
 		if _, ok := provider_quota.URLDetectedProviders()[providerType]; ok {
 			return strings.TrimSpace(ch.Credentials.APIKey) != "" || len(ch.Credentials.APIKeys) > 0
 		}
+	}
+
+	if isApimesThirdPartyCodex(ch) {
+		return strings.TrimSpace(ch.Credentials.APIKey) != "" || len(ch.Credentials.APIKeys) > 0
 	}
 
 	if ch.Type == channel.TypeCodex || ch.Type == channel.TypeClaudecode || ch.Type == channel.TypeXaiSubscription {

@@ -2,10 +2,12 @@ package provider_quota
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -40,9 +42,12 @@ func apimesTestChannel() *ent.Channel {
 }
 
 func TestApimes_CheckQuota_TokenPlanWindows(t *testing.T) {
-	body := `{"mode":"unrestricted","token_plan":{"windows":[
-		{"window":"5h","used_percent":42.5,"reset_at":"2026-10-07T12:00:00Z"},
-		{"window":"7d","used_percent":85,"reset_at":"2026-10-10T00:00:00Z"}]}}`
+	reset5h := time.Now().UTC().Add(2 * time.Hour).Truncate(time.Second)
+	reset7d := time.Now().UTC().Add(72 * time.Hour).Truncate(time.Second)
+	body := fmt.Sprintf(`{"mode":"unrestricted","token_plan":{"windows":[
+		{"window":"5h","used_percent":42.5,"reset_at":%q},
+		{"window":"7d","used_percent":85,"reset_at":%q}]}}`,
+		reset5h.Format(time.RFC3339), reset7d.Format(time.RFC3339))
 	checker := NewApimesQuotaChecker(apimesTestClient(t, http.StatusOK, body))
 
 	quota, err := checker.CheckQuota(context.Background(), apimesTestChannel())
@@ -57,7 +62,7 @@ func TestApimes_CheckQuota_TokenPlanWindows(t *testing.T) {
 	require.Equal(t, QuotaWindow7d, quota.Limits[1].Window)
 	require.Equal(t, "warning", quota.Limits[1].Status)
 	require.NotNil(t, quota.NextResetAt)
-	require.Equal(t, "2026-10-07T12:00:00Z", quota.NextResetAt.UTC().Format("2006-01-02T15:04:05Z07:00"))
+	require.True(t, reset5h.Equal(*quota.NextResetAt))
 }
 
 func TestApimes_CheckQuota_Exhausted(t *testing.T) {

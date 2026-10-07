@@ -102,6 +102,10 @@ function getBatteryLevel(percentage: number, status: string): BatteryLevel {
   return 'full';
 }
 
+function isApimesChannel(channel: ProviderQuotaChannel): boolean {
+  return (isOpenaiType(channel.type) || channel.type === 'codex') && (channel as { providerType?: string }).providerType === 'apimes';
+}
+
 function isOpenaiType(t: string): t is 'openai' | 'openai_responses' {
   return t === 'openai' || t === 'openai_responses';
 }
@@ -159,7 +163,7 @@ function getChannelPercentage(channel: ProviderQuotaChannel): number {
     const util5h = qd.windows?.['5h']?.utilization || 0;
     const util7d = qd.windows?.['7d']?.utilization || 0;
     percentage = Math.max(util5h, util7d) * 100;
-  } else if (channel.type === 'codex') {
+  } else if (channel.type === 'codex' && channel.providerType !== 'apimes') {
     const qd = channel.quotaStatus.quotaData;
     percentage = qd.rate_limit?.primary_window?.used_percent || 0;
   } else if (channel.type === 'xai_subscription') {
@@ -206,7 +210,7 @@ function getChannelPercentage(channel: ProviderQuotaChannel): number {
   } else if (
     channel.type === 'opencode_go' ||
     channel.type === 'opencode_go_anthropic' ||
-    (isOpenaiType(channel.type) && channel.providerType === 'apimes')
+    isApimesChannel(channel)
   ) {
     percentage = Math.max(0, ...channel.quotaStatus.limits.map((limit) => limit.usageRatio * 100));
   } else if (isOllamaType(channel.type)) {
@@ -432,7 +436,7 @@ function QuotaRow({ channel, effectiveMode }: { channel: ProviderQuotaChannel; e
   const BatteryIcon = getBatteryIcon(batteryLevel);
 
   const handleResetCodexQuota = async () => {
-    if (channel.type !== 'codex') return;
+    if (channel.type !== 'codex' || channel.providerType === 'apimes') return;
 
     setIsResetting(true);
     try {
@@ -802,7 +806,7 @@ function QuotaRow({ channel, effectiveMode }: { channel: ProviderQuotaChannel; e
         </div>
       )}
 
-      {channel.type === 'codex' && (
+      {channel.type === 'codex' && channel.providerType !== 'apimes' && (
         <div className='mt-3 space-y-3'>
           {(() => {
             const qd = channel.quotaStatus.quotaData;
@@ -1202,7 +1206,7 @@ function QuotaRow({ channel, effectiveMode }: { channel: ProviderQuotaChannel; e
 
       {(channel.type === 'opencode_go' ||
         channel.type === 'opencode_go_anthropic' ||
-        (isOpenaiType(channel.type) && channel.providerType === 'apimes')) && (
+        isApimesChannel(channel)) && (
         <div className='mt-3 space-y-3'>
           {(() => {
             // OpenCode Go renders from the normalized limits: its checker maps

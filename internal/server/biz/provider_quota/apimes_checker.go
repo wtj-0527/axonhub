@@ -14,7 +14,8 @@ import (
 	"github.com/looplj/axonhub/llm/httpclient"
 )
 
-const apimesProviderType = "apimes"
+// ApimesProviderType is the provider type for apimes.com Token Plan channels.
+const ApimesProviderType = "apimes"
 
 // apimesUsageResponse matches the subset of GET /v1/usage used for Token Plan
 // keys. token_plan is absent for regular (wallet) keys.
@@ -122,7 +123,7 @@ func (c *ApimesQuotaChecker) parseResponse(body []byte) (QuotaData, error) {
 
 	return NormalizeQuotaData(QuotaData{
 		Status:       normalizedStatus,
-		ProviderType: apimesProviderType,
+		ProviderType: ApimesProviderType,
 		RawData:      map[string]any{"windows": rawWindows},
 		NextResetAt:  nextResetAt,
 		Ready:        IsReadyStatus(normalizedStatus),
@@ -131,10 +132,12 @@ func (c *ApimesQuotaChecker) parseResponse(body []byte) (QuotaData, error) {
 }
 
 func (c *ApimesQuotaChecker) SupportsChannel(ch *ent.Channel) bool {
-	if ch.Type != channel.TypeOpenai && ch.Type != channel.TypeOpenaiResponses {
+	// Codex channels qualify in third-party mode (API key against an apimes
+	// base URL); OAuth Codex channels stay on the ChatGPT checker upstream.
+	if ch.Type != channel.TypeOpenai && ch.Type != channel.TypeOpenaiResponses && ch.Type != channel.TypeCodex {
 		return false
 	}
-	return DetectProviderFromURL(ch.BaseURL) == apimesProviderType
+	return DetectProviderFromURL(ch.BaseURL) == ApimesProviderType
 }
 
 func buildApimesUsageURL(baseURL string) string {

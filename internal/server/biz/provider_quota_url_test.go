@@ -305,3 +305,35 @@ func TestHasCredentialsForProvider_ClineNoKey(t *testing.T) {
 	ch := &ent.Channel{Type: channel.TypeCline, Credentials: objects.ChannelCredentials{}}
 	require.False(t, hasCredentialsForProvider(ch))
 }
+
+func TestGetProviderType_CodexThirdPartyApimes(t *testing.T) {
+	svc := &ProviderQuotaService{
+		checkers: make(map[string]provider_quota.QuotaChecker),
+	}
+
+	thirdParty := &ent.Channel{
+		Type:        channel.TypeCodex,
+		BaseURL:     "https://apimes.com/v1",
+		Credentials: objects.ChannelCredentials{APIKey: "sk-test"},
+	}
+	require.Equal(t, "apimes", svc.getProviderType(thirdParty))
+	require.True(t, hasCredentialsForProvider(thirdParty))
+	require.True(t, provider_quota.NewApimesQuotaChecker(nil).SupportsChannel(thirdParty))
+
+	// OAuth Codex keeps the ChatGPT checker even if the base URL were apimes.
+	oauth := &ent.Channel{
+		Type:        channel.TypeCodex,
+		BaseURL:     "https://apimes.com/v1",
+		Credentials: objects.ChannelCredentials{APIKey: `{"access_token":"x"}`},
+	}
+	require.Equal(t, "codex", svc.getProviderType(oauth))
+
+	// Third-party Codex against an unknown gateway is unchanged.
+	other := &ent.Channel{
+		Type:        channel.TypeCodex,
+		BaseURL:     "https://example.com/v1",
+		Credentials: objects.ChannelCredentials{APIKey: "sk-test"},
+	}
+	require.Equal(t, "codex", svc.getProviderType(other))
+	require.False(t, hasCredentialsForProvider(other))
+}

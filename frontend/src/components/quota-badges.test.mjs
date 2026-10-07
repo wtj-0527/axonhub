@@ -278,11 +278,21 @@ test('apimes Token Plan shares the normalized limit window renderer', () => {
   const end = quotaBadges.indexOf('<div', start);
   const condition = quotaBadges.slice(start, end);
 
-  assert.match(condition, /channel\.providerType === 'apimes'/, 'apimes channels should use the normalized limits renderer');
+  assert.match(condition, /isApimesChannel\(channel\)/, 'apimes channels should use the normalized limits renderer');
+  assert.match(
+    quotaBadges,
+    /function isApimesChannel[^{]*\{\n  return \(isOpenaiType\(channel\.type\) \|\| channel\.type === 'codex'\) && \(channel as \{ providerType\?: string \}\)\.providerType === 'apimes';/,
+    'third-party Codex channels against apimes should count as apimes channels'
+  );
+  assert.match(
+    isolateCodexBlock(quotaBadges),
+    /^\{channel\.type === 'codex' && channel\.providerType !== 'apimes' &&/,
+    'the ChatGPT Codex renderer must skip apimes-backed Codex channels'
+  );
   assert.match(quotaBadges, /preferredWindows = \[[^\]]*'7d'/, 'the 7d window should be rendered');
   assert.match(
     quotaBadges,
-    /\(isOpenaiType\(channel\.type\) && channel\.providerType === 'apimes'\)\n  \) \{\n    percentage = Math\.max\(0, \.\.\.channel\.quotaStatus\.limits/,
+    /isApimesChannel\(channel\)\n  \) \{\n    percentage = Math\.max\(0, \.\.\.channel\.quotaStatus\.limits/,
     'apimes badge percentage should come from the normalized limits'
   );
 });

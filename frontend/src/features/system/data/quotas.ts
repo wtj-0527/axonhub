@@ -674,6 +674,7 @@ export type ProviderQuotaChannel = {
     }
   | {
       type: 'codex';
+      providerType?: undefined;
       quotaStatus: {
         quotaData: ProviderCodexQuotaData;
       };
@@ -780,7 +781,9 @@ export type ProviderQuotaChannel = {
       };
     }
   | {
-      type: 'openai' | 'openai_responses';
+      // Codex channels in third-party mode against an apimes gateway report
+      // the same Token Plan windows as OpenAI-compatible apimes channels.
+      type: 'openai' | 'openai_responses' | 'codex';
       providerType: 'apimes';
       quotaStatus: {
         quotaData: ProviderQuotaDataCommon;
@@ -882,6 +885,14 @@ function parseChannelNode(node: QueryChannelNodeWithQuota): ProviderQuotaChannel
     };
   }
   if (node.type === 'codex') {
+    if (node.providerQuotaStatus.providerType === 'apimes') {
+      return {
+        ...base,
+        type: 'codex' as const,
+        providerType: 'apimes' as const,
+        quotaStatus: { ...base.quotaStatus, quotaData: node.providerQuotaStatus.quotaData as ProviderQuotaDataCommon },
+      };
+    }
     return {
       ...base,
       type: 'codex' as const,
