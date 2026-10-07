@@ -166,7 +166,7 @@ test('NeuralWatt kWh bar shares the elapsed-window marker and label', () => {
 // battery percentage in the trigger but an empty detail popover.
 test('OpenCode Go renders its normalized limit windows', () => {
   const quotaBadges = read('components/quota-badges.tsx');
-  const start = quotaBadges.indexOf("{(channel.type === 'opencode_go' || channel.type === 'opencode_go_anthropic') &&");
+  const start = quotaBadges.indexOf("{(channel.type === 'opencode_go' ||");
   const end = quotaBadges.indexOf("{isOllamaType(channel.type) &&", start);
 
   assert.ok(start !== -1, 'OpenCode Go popover branch should exist in quota-badges source');
@@ -179,7 +179,7 @@ test('OpenCode Go renders its normalized limit windows', () => {
   assert.match(opencodeBlock, /quota\.limits/, 'OpenCode Go should render normalized limits');
   assert.match(
     opencodeBlock,
-    /limit\.window === '5h'|preferredWindows = \['5h', 'weekly', 'monthly'\]/,
+    /limit\.window === '5h'|preferredWindows = \['5h', '7d', 'weekly', 'monthly'\]/,
     'OpenCode Go should map its windows onto the shared labels'
   );
   assert.match(opencodeBlock, /WINDOW_LABEL_KEYS\[limit\.window\]/, 'OpenCode Go labels should resolve through the shared map');
@@ -271,4 +271,18 @@ test('mode badge labels are locale-complete and legacy enforcement keys are gone
     );
     assert.deepEqual(legacy, [], `${name}/system.json still has legacy quota status keys`);
   }
+});
+test('apimes Token Plan shares the normalized limit window renderer', () => {
+  const quotaBadges = read('components/quota-badges.tsx');
+  const start = quotaBadges.indexOf("{(channel.type === 'opencode_go' ||");
+  const end = quotaBadges.indexOf('<div', start);
+  const condition = quotaBadges.slice(start, end);
+
+  assert.match(condition, /channel\.providerType === 'apimes'/, 'apimes channels should use the normalized limits renderer');
+  assert.match(quotaBadges, /preferredWindows = \[[^\]]*'7d'/, 'the 7d window should be rendered');
+  assert.match(
+    quotaBadges,
+    /\(isOpenaiType\(channel\.type\) && channel\.providerType === 'apimes'\)\n  \) \{\n    percentage = Math\.max\(0, \.\.\.channel\.quotaStatus\.limits/,
+    'apimes badge percentage should come from the normalized limits'
+  );
 });
